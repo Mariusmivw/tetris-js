@@ -55,70 +55,43 @@ class Tetrimino {
 				break;
 		}
 
-		this.pos = [0, 0];
+		this.spawn();
 	}
 
-	// TODO: fix erasing of other blocks
-	rotateRight() {
-		let tempShape = [];
-		for (let i = 0; i < this.shape.length; i++) {
-			tempShape.push([]);
-			for (let u = 0; u < this.shape.length; u++) {
-				tempShape[i][u] = this.shape[this.shape.length - 1 - u][i];
+	spawn() {
+		this.pos = [-this.shape.length, 4];
+		this.shape.forEach(() => {
+			if (this.belowIsFree()) {
+				this.pos[0]++;
 			}
-		}
-		return this.shape = tempShape;
+		});
 	}
 
-	// TODO: fix erasing of other blocks
-	rotateLeft() {
-		let tempShape = [];
-		for (let i = 0; i < this.shape.length; i++) {
-			tempShape.push([]);
-			for (let u = 0; u < this.shape.length; u++) {
-				tempShape[i][u] = this.shape[u][this.shape.length - 1 - i];
-			}
-		}
-		return this.shape = tempShape;
-	}
-
-	/**
-	 * @param {boolean} freePath 
-	 */
-	spawn(freePath) {
-
-	}
-
-	drop() {
+	belowIsFree() {
 		for (let i = 0; i < this.shape.length; i++) {
 			for (let u = 0; u < this.shape[i].length; u++) {
-				if (this.shape[i][u] != 0) {
-					let row;
-					if (row = grid[this.pos[0] + i + 1]) {
-						if (row[this.pos[1] + u] != 0) {
-							this.placeHere();
-							return;
+				const cell = this.shape[i][u];
+				if (cell != 0) {
+					let gRow = grid[this.pos[0] + i + 1];
+					if (gRow !== undefined) {
+						if (gRow[this.pos[1] + u] !== 0) {
+							return false;
 						}
-					} else {
-						this.placeHere();
-						return;
+					} else if (this.pos[0] > -1) {
+						return false;
 					}
 				}
 			}
 		}
-		this.pos[0]++;
+		return true;
 	}
 
-	hardDrop() {
-
-	}
-
-	softDrop() {
-
-	}
-
-	hold() {
-
+	drop() {
+		if (this.belowIsFree()) {
+			this.pos[0]++;
+		} else {
+			this.placeHere();
+		}
 	}
 
 	left() {
@@ -147,15 +120,55 @@ class Tetrimino {
 		this.pos[1]++;
 	}
 
-	placeHere() {
-		for (let i = 0; i < this.shape.length; i++) {
-			for (let u = 0; u < this.shape.length; u++) {
-				let part = this.shape[i][u];
-				if (part != 0) {
-					grid[i + this.pos[0]][u + this.pos[1]] = part;
-				}
-			}
+	// FIXME: fix erasing of other blocks
+	rotateRight() {
+		let tempShape = [];
+		this.shape.forEach((row, i) => {
+			tempShape.push([]);
+			row.forEach((cell, u) => {
+				tempShape[i][u] = this.shape[this.shape.length - 1 - u][i];
+			});
+		});
+		return this.shape = tempShape;
+	}
+
+	// FIXME: fix erasing of other blocks
+	rotateLeft() {
+		let tempShape = [];
+		this.shape.forEach((row, i) => {
+			tempShape.push([]);
+			row.forEach((cell, u) => {
+				tempShape[i][u] = this.shape[u][this.shape.length - 1 - i];
+			});
+		});
+		return this.shape = tempShape;
+	}
+
+	hardDrop() {
+		while (this.belowIsFree()) {
+			this.pos[0]++;
 		}
+		this.placeHere();
+	}
+
+	softDrop() {
+
+	}
+
+	hold() {
+
+	}
+
+
+	placeHere() {
+		this.shape.forEach((row, i) => {
+			row.forEach((cell, u) => {
+				if (cell != 0) {
+					grid[i + this.pos[0]][u + this.pos[1]] = cell;
+				}
+			});
+		});
+		console.log("place");
 		currentTetrimino = new Tetrimino(Math.ceil(Math.random() * 7));
 	}
 }
