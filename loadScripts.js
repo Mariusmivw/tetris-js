@@ -7,5 +7,7 @@ const include = (src) => {
 };
 
 include("Tetrimino");
-include("tetris");
+include("Bag");
 include("keys");
+include("draw");
+include("tetris");

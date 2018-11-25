@@ -9,55 +9,78 @@ const initGrid = () => {
 	return grid;
 }
 
-const drawGrid = async (grid) => {
-	grid = $.extend(true, [], grid);
-
-	try {
-		currentTetrimino.shape.forEach((row, i) => {
-			row.forEach((cell, u) => {
-				if (cell != 0) {
-					grid[i + currentTetrimino.pos[0]][u + currentTetrimino.pos[1]] = cell;
-				}
-			});
-		});
-	} catch (e) {
-		pause();
-		throw e;
+const checkRow = (row) => {
+	let full = true;
+	for (let i = 0; i < grid[row].length; i++) {
+		if (grid[row][i] == 0) {
+			full = false;
+			break;
+		}
 	}
-
-	let html = "<let>let</let> <var>grid</var> = [";
-
-	grid.forEach(row => {
-		html += "[";
-		row.forEach(cell => {
-			html += `<t${cell}/>,`;
-		});
-		html += `],<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`;
-	});
-
-	html += "];";
-	$("#game").html(
-		html.replace(/,\]/g, "]").replace(/\],<br>(?:&nbsp;)+\]/, "]]")
-	);
-};
-
-const pause = () => {
-	paused = true;
-	console.log("pause");
+	if (full) {
+		while (row > 0) {
+			grid[row--] = grid[row].slice();
+		}
+	}
 }
 
+const pause = () => {
+	paused = !paused;
+}
+
+const frameRate = 60;
+const nextQueueSize = 6;
+const DAS = [200 /* <- ms */ / 1000 * frameRate, frameRate / 45 /* <- Hz */ ];
+const DASkeys = ["right", "left", "softDrop"];
+const lockDelay = frameRate / 6; //frames
+let delayUntilLock = lockDelay;
+let dropSpeed = 1 / frameRate;
+let dropper = 0;
+let showGhostPiece = true;
+
 let grid = initGrid();
-let dropSpeed = 4;
-let currentTetrimino = new Tetrimino(Math.ceil(Math.random() * 7));
+let level = 1;
+let bag = new Bag();
+let currentTetrimino = bag.nextShape();
+let holdPiece;
+let canHold = true;
+
 let frameCount = 0;
 let paused = false;
 
 let drawInterval = setInterval(() => {
-	if (!paused) {
-		drawGrid(grid);
-		if (frameCount % (60 / dropSpeed) == 0) {
-			currentTetrimino.drop();
+		if (!paused) {
+			draw();
+
+			delayUntilLock--;
+
+			// making sure the piece drops the exact right amount
+			dropper += dropSpeed;
+			while (dropper > 1) {
+				currentTetrimino.drop();
+				dropper--;
+			}
+
+			for (const key in keys) {
+				if (keys.hasOwnProperty(key)) {
+					if (keys[key].isPressed) {
+						if (keys[key].heldFor++ == 0) {
+							currentTetrimino[key]();
+						} else if (DASkeys.includes(key)) {
+							if (keys[key].repeat) {
+								if (keys[key].heldFor > DAS[1]) {
+									keys[key].heldFor -= DAS[1];
+									currentTetrimino[key]();
+								}
+							} else if (keys[key].heldFor > DAS[0]) {
+								keys[key].heldFor -= DAS[0];
+								keys[key].repeat = true;
+								currentTetrimino[key]();
+							}
+						}
+					}
+				}
+			}
 		}
-		frameCount++;
-	}
-}, 1000 / 60);
+	},
+	1000 / frameRate);
